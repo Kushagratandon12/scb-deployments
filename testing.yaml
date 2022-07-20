@@ -1,0 +1,432 @@
+---
+# Source: scb-deployments/charts/scb-frontend/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ambassador-nginx-config
+data:
+  nginx.conf: |
+    events{}
+    http {
+        include /etc/nginx/mime.types;
+        server {
+            listen 80;
+            listen [::]:80 default_server;
+            server_name frontend;
+            default_type application/octet-stream;
+            gzip on;
+            gzip_http_version 1.1;
+            gzip_disable      "MSIE [1-6]\.";
+            gzip_min_length   256;
+            gzip_vary         on;
+            gzip_proxied      expired no-cache no-store private auth;
+            gzip_types        text/plain text/css application/json application/javascript application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+            gzip_comp_level   9;
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+            location ^~ /ccuser/ {
+              proxy_pass http://sba-scb-backend;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header   X-Forwarded-User $http_authorization;
+              proxy_set_header X-Forwarded-Proto  $scheme;
+              proxy_http_version 1.1;
+              proxy_cache_bypass $http_upgrade;
+            }
+            location ^~ /history/ {
+              proxy_pass http://sba-scb-backend;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header   X-Forwarded-User $http_authorization;
+              proxy_set_header X-Forwarded-Proto  $scheme;
+              proxy_http_version 1.1;
+              proxy_cache_bypass $http_upgrade;
+            }
+            location ^~ /catalogue/ {
+              proxy_pass http://sba-scb-backend;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header   X-Forwarded-User $http_authorization;
+              proxy_set_header X-Forwarded-Proto  $scheme;
+              proxy_http_version 1.1;
+              proxy_cache_bypass $http_upgrade;
+            }
+            location ^~ /rewards/ {
+              proxy_pass http://sba-scb-backend;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header   X-Forwarded-User $http_authorization;
+              proxy_set_header X-Forwarded-Proto  $scheme;
+              proxy_http_version 1.1;
+              proxy_cache_bypass $http_upgrade;
+            }
+        }
+    }
+---
+# Source: scb-deployments/charts/scb-backend/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sba-scb-backend
+  labels:
+    helm.sh/chart: scb-backend-0.1.0
+    app.kubernetes.io/name: scb-backend
+    app.kubernetes.io/instance: sba
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: scb-backend
+    app.kubernetes.io/instance: sba
+---
+# Source: scb-deployments/charts/scb-frontend-2/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: scb-frontend-newui
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: scb-frontend-newui
+    release: v1
+---
+# Source: scb-deployments/charts/scb-frontend/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sba-scb-frontend
+  labels:
+    helm.sh/chart: scb-frontend-0.1.0
+    app.kubernetes.io/name: scb-frontend
+    app.kubernetes.io/instance: sba
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: scb-frontend
+    app.kubernetes.io/instance: sba
+---
+# Source: scb-deployments/charts/scb-backend/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sba-scb-backend
+  labels:
+    helm.sh/chart: scb-backend-0.1.0
+    app.kubernetes.io/name: scb-backend
+    app.kubernetes.io/instance: sba
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: scb-backend
+      app.kubernetes.io/instance: sba
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: scb-backend
+        app.kubernetes.io/instance: sba
+    spec:
+      serviceAccountName: default
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: one-pod-per-zone
+      securityContext:
+        {}
+      containers:
+        - name: scb-backend
+          securityContext:
+            {}
+          image: "kushagratandon12/smart_bank_backend:latest"
+          env:
+            - name: spring.datasource.url
+              value: localhost:8080
+            - name: spring.datasource.username
+              value: postgres
+            - name: spring.datasource.password
+              value: postgres
+            - name: spring.application.name
+              value: apiserver
+            - name: cloud.aws.region.static
+              value: region
+            - name: cloud.aws.credentials.access-key
+              value: default
+            - name: cloud.aws.credentials.secret-key
+              value: default
+            - name: cloud.aws.end-point.uri
+              value: default
+            - name: cloud.aws.end-point.uri-usage
+              value: default
+            - name: spring.mail.username
+              value: default
+            - name: spring.mail.password
+              value: default
+            - name: default.from.email.address
+              value: default
+            - name: spring.profiles.active
+              value: SQS,SES
+            - name: default.to.email.address
+              value: lambdascbcep@gmail.com
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          resources:
+            limits:
+              cpu: 1500m
+              memory: 1000Mi
+            requests:
+              cpu: 800m
+              memory: 300Mi
+---
+# Source: scb-deployments/charts/scb-frontend-2/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scb-frontend-newui-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scb-frontend-newui
+      release: v2
+  template:
+    metadata:
+      labels:
+        app: scb-frontend-newui
+        release: v2
+    spec:
+      containers:
+      - image: kushagratandon12/sba_frontend:new-ui
+        imagePullPolicy: Always
+        name: scb-frontend-newui-app
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: 
+          limits:
+            cpu: 10m
+            memory: 30Mi
+          requests:
+            cpu: 10m
+            memory: 30Mi
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ambassador-nginx-config
+---
+# Source: scb-deployments/charts/scb-frontend-2/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scb-frontend-newui-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scb-frontend-newui
+      release: v1
+  template:
+    metadata:
+      labels:
+        app: scb-frontend-newui
+        release: v1
+    spec:
+      containers:
+      - image: kushagratandon12/sba_frontend:nginx
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+        imagePullPolicy: Always
+        name: scb-frontend-newui-app
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: 
+          limits:
+            cpu: 20m
+            memory: 50Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi  
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ambassador-nginx-config
+---
+# Source: scb-deployments/charts/scb-frontend/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sba-scb-frontend
+  labels:
+    helm.sh/chart: scb-frontend-0.1.0
+    app.kubernetes.io/name: scb-frontend
+    app.kubernetes.io/instance: sba
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: scb-frontend
+      app.kubernetes.io/instance: sba
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: scb-frontend
+        app.kubernetes.io/instance: sba
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: one-pod-per-zone
+      serviceAccountName: default
+      securityContext:
+        {}
+      containers:
+        - name: scb-frontend
+          securityContext:
+            {}
+          image: "kushagratandon12/sba_frontend:nginx"
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          ports:
+            - name: nginx
+              containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          resources:
+            limits:
+              cpu: 500m
+              memory: 600Mi
+            requests:
+              cpu: 300m
+              memory: 300Mi
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - sba-scb-backend
+            topologyKey: kubernetes.io/hostname
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ambassador-nginx-config
+---
+# Source: scb-deployments/charts/scb-backend/templates/hpa.yaml
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sba-scb-backend
+  labels:
+    helm.sh/chart: scb-backend-0.1.0
+    app.kubernetes.io/name: scb-backend
+    app.kubernetes.io/instance: sba
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sba-scb-backend
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        targetAverageUtilization: 80
+---
+# Source: scb-deployments/charts/scb-frontend/templates/hpa.yaml
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sba-scb-frontend
+  labels:
+    helm.sh/chart: scb-frontend-0.1.0
+    app.kubernetes.io/name: scb-frontend
+    app.kubernetes.io/instance: sba
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sba-scb-frontend
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        targetAverageUtilization: 80

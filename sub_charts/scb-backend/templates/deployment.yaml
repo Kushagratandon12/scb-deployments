@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "scb-backend.fullname" . }}
+  labels:
+    {{- include "scb-backend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "scb-backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "scb-backend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "scb-backend.serviceAccountName" . }}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: one-pod-per-zone
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          env:
+            - name: spring.datasource.url
+              value: {{ .Values.global.postgresql.url }}
+            - name: spring.datasource.username
+              value: {{ .Values.global.postgresql.username }}
+            - name: spring.datasource.password
+              value: {{ .Values.global.postgresql.password }}
+            - name: spring.application.name
+              value: {{ .Values.global.spring.name }}
+            - name: cloud.aws.region.static
+              value: {{ .Values.global.spring.cloud_aws_region_static }}
+            - name: cloud.aws.credentials.access-key
+              value: {{ .Values.global.spring.cloud_aws_credentials_access_key }}
+            - name: cloud.aws.credentials.secret-key
+              value: {{ .Values.global.spring.cloud_aws_credentials_secret_key }}
+            - name: cloud.aws.end-point.uri
+              value: {{ .Values.global.spring.cloud_aws_end_point_uri }}
+            - name: cloud.aws.end-point.uri-usage
+              value: {{ .Values.global.spring.cloud_aws_end_point_uri_usage }}
+            - name: spring.mail.username
+              value: {{ .Values.global.spring.mail_username }}
+            - name: spring.mail.password
+              value: {{ .Values.global.spring.mail_password}}
+            - name: default.from.email.address
+              value: {{ .Values.global.spring.default_from_email_address }}
+            - name: spring.profiles.active
+              value: {{ .Values.global.spring.profiles_active }}
+            - name: default.to.email.address
+              value: {{ .Values.global.spring.default_to_email_address }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

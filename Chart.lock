@@ -1,0 +1,12 @@
+dependencies:
+- name: scb-backend
+  repository: file://./sub_charts/scb-backend
+  version: 0.1.0
+- name: scb-frontend
+  repository: file://./sub_charts/scb-frontend
+  version: 0.1.0
+- name: scb-frontend-2
+  repository: file://./sub_charts/scb-frontend-2
+  version: 0.1.0
+digest: sha256:bc4377e5182e44a16ca439d303b05e69a3a0b99f5febc2463ef585b6ab06c29b
+generated: "2022-07-19T20:17:18.780042002+05:30"

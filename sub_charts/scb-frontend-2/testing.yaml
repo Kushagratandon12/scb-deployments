@@ -1,0 +1,78 @@
+---
+# Source: scb-frontend-2/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: scb-frontend-newui
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: scb-frontend-newui
+    release: v1
+---
+# Source: scb-frontend-2/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scb-frontend-newui-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scb-frontend-newui
+      release: v2
+  template:
+    metadata:
+      labels:
+        app: scb-frontend-newui
+        release: v2
+    spec:
+      containers:
+      - image: kushagratandon12/sba_frontend:new-ui
+        imagePullPolicy: Always
+        name: scb-frontend-newui-app
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: 
+          limits:
+            cpu: 10m
+            memory: 30Mi
+          requests:
+            cpu: 10m
+            memory: 30Mi
+---
+# Source: scb-frontend-2/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scb-frontend-newui-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scb-frontend-newui
+      release: v1
+  template:
+    metadata:
+      labels:
+        app: scb-frontend-newui
+        release: v1
+    spec:
+      containers:
+      - image: kushagratandon12/sba_frontend:nginx
+        imagePullPolicy: Always
+        name: scb-frontend-newui-app
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: 
+          limits:
+            cpu: 20m
+            memory: 50Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi

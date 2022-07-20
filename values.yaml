@@ -1,0 +1,32 @@
+global:
+  #postgres_details
+  postgresql:
+    url: localhost:8080
+    username: postgres
+    password: postgres
+    servicePort: 5432
+
+  apiserver:
+    url: localhost:8080
+  
+  spring:
+  #spring application
+    name: apiserver
+    serverPort: 8080
+    elastic_apm_service_name: default
+    elastic_apm_environment: prod
+    elastic_apm_log_level: debug
+    java_tool_options: default
+    management_server_port: 8888
+    management_metrices: true
+    management_metrics_tags: default
+    cloud_aws_region_static: region
+    cloud_aws_credentials_access_key: default
+    cloud_aws_credentials_secret_key: default
+    cloud_aws_end_point_uri: default
+    cloud_aws_end_point_uri_usage: default 
+    mail_username: default
+    mail_password: default
+    default_from_email_address: default
+    profiles_active: SQS,SES
+    default_to_email_address: lambdascbcep@gmail.com

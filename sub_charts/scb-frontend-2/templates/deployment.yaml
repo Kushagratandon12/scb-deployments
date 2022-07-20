@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scb-frontend-newui-v2
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: scb-frontend-newui
+      release: v2
+  template:
+    metadata:
+      labels:
+        app: scb-frontend-newui
+        release: v2
+    spec:
+      containers:
+      - image: kushagratandon12/sba_frontend:new-ui
+        imagePullPolicy: Always
+        name: scb-frontend-newui-app
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: 
+          limits:
+            cpu: 10m
+            memory: 30Mi
+          requests:
+            cpu: 10m
+            memory: 30Mi
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ambassador-nginx-config
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scb-frontend-newui-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scb-frontend-newui
+      release: v1
+  template:
+    metadata:
+      labels:
+        app: scb-frontend-newui
+        release: v1
+    spec:
+      containers:
+      - image: kushagratandon12/sba_frontend:nginx
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+        imagePullPolicy: Always
+        name: scb-frontend-newui-app
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: 
+          limits:
+            cpu: 20m
+            memory: 50Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi  
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ambassador-nginx-config
